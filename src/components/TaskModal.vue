@@ -20,14 +20,14 @@ const task = computed(() => db.value.tasks.get(taskID)!);
 const blockedBy = computed(() =>
   task.value.dependencies
     .filter((id) => db.value.tasks.get(id)!.status !== 'completed')
-    .sort(),
+    .sort((a, b) => a - b),
 );
 const blocks = computed(() =>
   [...db.value.tasks.keys()]
     .filter((id: TaskID) =>
       db.value.tasks.get(id)!.dependencies.includes(taskID),
     )
-    .sort(),
+    .sort((a, b) => a - b),
 );
 const statusClass: Record<Task['status'], string> = {
   pending: 'pending',

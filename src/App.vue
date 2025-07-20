@@ -214,7 +214,7 @@ const readyTasks = computed(() => {
   return [...db.value.tasks.values()]
     .filter((task) => task.status === 'pending')
     .map((task) => task.id)
-    .sort();
+    .sort((a, b) => a - b);
 });
 
 function exportTasks() {
