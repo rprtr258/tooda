@@ -1,0 +1,40 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "at": [104.05218054451257, 320.084052365326],
+      "width": 190,
+      "height": 80,
+      "title": "Like",
+      "description": "",
+      "dependencies": [],
+      "status": "completed"
+    },
+    {
+      "id": 2,
+      "at": [372.9670641093537, 716.0001485660025],
+      "width": 190,
+      "height": 80,
+      "title": "Star on github",
+      "description": "https://github.com/rprtr258/tooda",
+      "dependencies": [1],
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "at": [620.4001642960043, 317.8749545975218],
+      "width": 190,
+      "height": 80,
+      "title": "Donate",
+      "description": "",
+      "dependencies": [1, 2],
+      "status": "blocked"
+    }
+  ],
+  "nextTaskId": 4,
+  "view": [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1]
+  ]
+}
