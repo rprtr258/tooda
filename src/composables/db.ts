@@ -213,6 +213,35 @@ export function useDB() {
     db.value.view = compose(db.value.view, invert(tr), scale(coeff), tr);
   }
 
+  const level = computed(() => {
+    const allIDs = new Set<TaskID>([...db.value.tasks.keys()]);
+    const depIDs = new Set<TaskID>(
+      [...db.value.tasks.values()].flatMap((t) => t.dependencies),
+    );
+    const roots = allIDs.difference(depIDs);
+    let frontier = [...roots];
+    const levels = new Map<TaskID, number>();
+    for (const id of roots) {
+      levels.set(id, 0);
+    }
+    while (frontier.length > 0) {
+      const newFrontier = new Set<TaskID>();
+      for (const id of frontier) {
+        const level = levels.get(id)!;
+        const task = db.value.tasks.get(id)!;
+        for (const dep of task.dependencies) {
+          if (levels.has(dep) && levels.get(dep)! >= level + 1) {
+            continue;
+          }
+          newFrontier.add(dep);
+          levels.set(dep, level + 1);
+        }
+      }
+      frontier = [...newFrontier];
+    }
+    return levels;
+  });
+
   return {
     db,
     edgesCoords,
@@ -222,5 +251,6 @@ export function useDB() {
     viewReset,
     zoom,
     serializer,
+    level,
   };
 }

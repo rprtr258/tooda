@@ -25,7 +25,6 @@ import {
   download,
   invert,
   load,
-  Mat3,
   translate,
   Vec2,
 } from './common';
@@ -40,6 +39,7 @@ const {
   viewReset,
   zoom,
   serializer,
+  level,
 } = useDB();
 
 const svg = useTemplateRef('dag-svg');
@@ -367,6 +367,7 @@ const viewbox = computed(() => {
               class="task-header"
               v-on:dblclick="() => (state.editTaskID = task.id)"
             >
+              ({{ level.get(task.id) }})
               {{ task.title }}
             </div>
             <div class="task-actions">
