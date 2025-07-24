@@ -124,6 +124,54 @@ export function useDB() {
     },
   );
 
+  const isDAG = computed((): boolean => {
+    enum State {
+      Unvisited = 0,
+      Visiting = 1,
+      Visited = 2,
+    }
+    const state = new Map<TaskID, State>();
+    for (const id of db.value.tasks.keys()) {
+      state.set(id, 0);
+    }
+
+    const visit = (startID: TaskID): boolean => {
+      // [currentId, nextDependencyIndex]
+      const stack: [TaskID, number][] = [[startID, 0]];
+
+      while (stack.length > 0) {
+        const [id, idx] = stack[stack.length - 1];
+        state.set(id, State.Visiting);
+        const node = db.value.tasks.get(id)!;
+
+        if (idx === node.dependencies.length) {
+          stack.pop();
+          state.set(id, State.Visited);
+          continue;
+        }
+
+        stack[stack.length - 1][1]++;
+
+        const depID = node.dependencies[idx];
+        switch (state.get(depID)) {
+          case State.Unvisited:
+            stack.push([depID, 0]);
+            break;
+          case State.Visiting:
+            return false;
+        }
+      }
+      return true;
+    };
+
+    for (const id of db.value.tasks.keys()) {
+      if (state.get(id) === State.Unvisited && !visit(id)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   // update task statuses
   watchEffect(() => {
     for (const task of db.value.tasks.values()) {
@@ -189,6 +237,25 @@ export function useDB() {
     }
   };
 
+  function connectTasks(fromId: TaskID, toId: TaskID): void {
+    if (fromId === toId) {
+      return;
+    }
+
+    const deps = db.value.tasks.get(toId)!.dependencies;
+    if (!deps.includes(fromId)) {
+      deps.push(fromId);
+      if (!isDAG.value) {
+        alert('LOOP FOUND');
+        deps.pop();
+      }
+    } else {
+      db.value.tasks.get(toId)!.dependencies = deps.filter(
+        (dep) => dep !== fromId,
+      );
+    }
+  }
+
   const edgesCoords = computed(() => {
     return [...db.value.tasks.values()]
       .flatMap((task) =>
@@ -214,6 +281,8 @@ export function useDB() {
   }
 
   const level = computed(() => {
+    if (!isDAG.value) return new Map();
+
     const allIDs = new Set<TaskID>([...db.value.tasks.keys()]);
     const depIDs = new Set<TaskID>(
       [...db.value.tasks.values()].flatMap((t) => t.dependencies),
@@ -248,6 +317,7 @@ export function useDB() {
     createTask,
     deleteTask,
     toggleTaskCompletion,
+    connectTasks,
     viewReset,
     zoom,
     serializer,

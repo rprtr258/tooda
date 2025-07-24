@@ -36,6 +36,7 @@ const {
   createTask,
   deleteTask,
   toggleTaskCompletion,
+  connectTasks,
   viewReset,
   zoom,
   serializer,
@@ -104,21 +105,6 @@ const fromTask = computed(
       db.value.tasks.get(state.state.fromId)) ||
     null,
 );
-
-function connectTasks(fromId: TaskID, toId: TaskID): void {
-  if (fromId === toId) {
-    return;
-  }
-
-  const deps = db.value.tasks.get(toId)!.dependencies;
-  if (!deps.includes(fromId)) {
-    deps.push(fromId);
-  } else {
-    db.value.tasks.get(toId)!.dependencies = deps.filter(
-      (dep) => dep !== fromId,
-    );
-  }
-}
 
 function setConnecting(x: number, y: number): Vec2 {
   return apply(db.value.view, [x, y]);
@@ -406,19 +392,24 @@ const viewbox = computed(() => {
       </g>
     </svg>
 
-    <div v-if="state.editTaskID" class="backdrop">
-      <div id="task-modal">
-        <TaskModal
-          :taskID="state.editTaskID"
-          v-on:close="() => (state.editTaskID = undefined)"
-          v-on:reselect="(id) => (state.editTaskID = id)"
-        />
-      </div>
-    </div>
-    <div v-if="showHelperModal.value.value" class="backdrop">
-      <div id="help-modal">
-        <HelperModal v-on:close="() => showHelperModal.off()" />
-      </div>
+    <div
+      v-if="state.editTaskID || showHelperModal.value.value"
+      class="backdrop"
+      v-on:click="
+        () => {
+          state.editTaskID = undefined;
+          showHelperModal.off();
+        }
+      "
+    ></div>
+    <TaskModal
+      v-if="state.editTaskID"
+      :taskID="state.editTaskID"
+      v-on:close="() => (state.editTaskID = undefined)"
+      v-on:reselect="(id) => (state.editTaskID = id)"
+    />
+    <div id="help-modal" v-if="showHelperModal.value.value">
+      <HelperModal v-on:close="() => showHelperModal.off()" />
     </div>
   </div>
 </template>
@@ -428,8 +419,6 @@ const viewbox = computed(() => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  user-select: none;
-  touch-action: none;
 }
 
 body {
@@ -448,6 +437,7 @@ body {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  user-select: none;
 }
 
 .btn-group-2 {
@@ -673,7 +663,7 @@ button:hover {
   width: 100vw;
   height: 100vh;
   position: absolute;
-  z-index: 99;
   backdrop-filter: blur(9px);
+  z-index: 11;
 }
 </style>

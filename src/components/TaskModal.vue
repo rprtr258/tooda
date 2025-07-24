@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue';
+import {computed, onMounted, ref} from 'vue';
+import {parse} from 'marked';
 import {Task, TaskID, useDB} from '../composables/db';
 
 const {taskID} = defineProps<{
@@ -34,68 +35,80 @@ const statusClass: Record<Task['status'], string> = {
   completed: 'completed',
   blocked: 'blocked',
 };
+const editing = ref(false);
+onMounted(() => {
+  editing.value = false;
+});
 </script>
 
 <template>
-  <h2
-    style="display: flex; cursor: text"
-    :class="statusClass[task.status]"
-    :title="task.status + ' status'"
-  >
-    <span
-      style="flex-grow: 1"
-      v-on:click="() => (task.title = promptInput('Task title', task.title))"
-      >{{ task.title }} (#{{ task.id }})</span
+  <div id="task-modal" v-on:click="() => (editing = false)">
+    <h2
+      style="display: flex; cursor: text"
+      :class="statusClass[task.status]"
+      :title="task.status + ' status'"
     >
-    <button id="close-btn" title="Close" v-on:click="emit('close')">X</button>
-  </h2>
-  <div
-    class="content"
-    style="cursor: text"
-    v-on:click="
-      () =>
-        (task.description = promptInput('Task description', task.description))
-    "
-  >
-    <p v-if="task.description">{{ task.description }}</p>
-    <p v-else style="font-style: italic; color: #aaa">No description</p>
+      <span
+        style="flex-grow: 1"
+        v-on:click="() => (task.title = promptInput('Task title', task.title))"
+        >{{ task.title }} (#{{ task.id }})</span
+      >
+      <button id="close-btn" title="Close" v-on:click="emit('close')">X</button>
+    </h2>
+    <div
+      class="content"
+      style="cursor: text; z-index: 1"
+      v-on:click.stop="() => (editing = true)"
+    >
+      <textarea
+        v-if="editing"
+        :value="task.description"
+        @input="
+          (v: Event) =>
+            (task.description = (v.target! as HTMLTextAreaElement).value)
+        "
+        style="height: 10rem; width: 100%"
+      />
+      <p v-else-if="task.description" v-html="parse(task.description)"></p>
+      <p v-else style="font-style: italic; color: #aaa">No description</p>
+    </div>
+    <table class="thetable">
+      <tbody>
+        <tr>
+          <td class="column">
+            Blocked by:
+            <ul v-if="blockedBy.length" style="padding-left: 20px">
+              <li v-for="id in blockedBy" :key="id">
+                <a
+                  :class="statusClass[db.tasks.get(id)!.status]"
+                  class="task-item"
+                  v-on:click="() => emit('reselect', id)"
+                >
+                  {{ db.tasks.get(id)!.title }} (#{{ id }})
+                </a>
+              </li>
+            </ul>
+            <p v-else style="font-style: italic; color: #aaa">Nothing</p>
+          </td>
+          <td class="column">
+            Blocks:
+            <ul v-if="blocks.length" style="padding-left: 20px">
+              <li v-for="id in blocks" :key="id">
+                <a
+                  :class="statusClass[db.tasks.get(id)!.status]"
+                  class="task-item"
+                  v-on:click="() => emit('reselect', id)"
+                >
+                  {{ db.tasks.get(id)!.title }} (#{{ id }})
+                </a>
+              </li>
+            </ul>
+            <p v-else style="font-style: italic; color: #aaa">Nothing</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
-  <table style="width: 100%">
-    <tbody>
-      <tr>
-        <td class="column">
-          Blocked by:
-          <ul v-if="blockedBy.length" style="padding-left: 20px">
-            <li v-for="id in blockedBy" :key="id">
-              <a
-                :class="statusClass[db.tasks.get(id)!.status]"
-                class="task-item"
-                v-on:click="() => emit('reselect', id)"
-              >
-                {{ db.tasks.get(id)!.title }} (#{{ id }})
-              </a>
-            </li>
-          </ul>
-          <p v-else style="font-style: italic; color: #aaa">Nothing</p>
-        </td>
-        <td class="column">
-          Blocks:
-          <ul v-if="blocks.length" style="padding-left: 20px">
-            <li v-for="id in blocks" :key="id">
-              <a
-                :class="statusClass[db.tasks.get(id)!.status]"
-                class="task-item"
-                v-on:click="() => emit('reselect', id)"
-              >
-                {{ db.tasks.get(id)!.title }} (#{{ id }})
-              </a>
-            </li>
-          </ul>
-          <p v-else style="font-style: italic; color: #aaa">Nothing</p>
-        </td>
-      </tr>
-    </tbody>
-  </table>
 </template>
 
 <style scoped>
@@ -128,6 +141,11 @@ h2 {
   padding-bottom: 20px;
 }
 
+.thetable {
+  width: 100%;
+  user-select: text;
+}
+
 #close-btn {
   background: rgb(120, 120, 170);
   height: 2em;
@@ -138,5 +156,20 @@ h2 {
 
 #close-btn:hover {
   background: #9575cd;
+}
+
+#task-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid #4a4a72;
+  border-radius: 12px;
+  padding: 20px;
+  width: 80%;
+  z-index: 40;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
 }
 </style>

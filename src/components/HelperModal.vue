@@ -5,8 +5,8 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <h2>TOODA Guide</h2>
   <div class="help-content">
+    <h2 class="header">TOODA Guide</h2>
     <p>
       Tooda is task management application based on Directed Acyclic Graphs
       (DAGs). Tasks can have dependencies that must be completed first.
@@ -83,14 +83,15 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-h2 {
-  color: #64ffda;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
 .help-content {
   line-height: 1.4;
+  user-select: text;
+}
+
+.header {
+  color: #64ffda;
+  margin-bottom: 10px;
+  text-align: center;
 }
 
 #help-table {
