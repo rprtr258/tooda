@@ -11,8 +11,8 @@ const emit = defineEmits<{
   reselect: [id: TaskID];
 }>();
 
-function promptInput(title: string, value: string): string {
-  const result = prompt(title, value);
+function promptInput(value: string): string {
+  const result = prompt('Task title', value);
   return result ?? value;
 }
 
@@ -50,7 +50,7 @@ onMounted(() => {
     >
       <span
         style="flex-grow: 1"
-        v-on:click="() => (task.title = promptInput('Task title', task.title))"
+        v-on:click="() => (task.title = promptInput(task.title))"
         >{{ task.title }} (#{{ task.id }})</span
       >
       <button id="close-btn" title="Close" v-on:click="emit('close')">X</button>

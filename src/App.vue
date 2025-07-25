@@ -219,6 +219,10 @@ const viewbox = computed(() => {
     dr: [dr[0] - origin[0], dr[1] - origin[1]],
   };
 });
+function promptInput(value: string): string {
+  const result = prompt('Task title', value);
+  return result ?? value;
+}
 </script>
 
 <template>
@@ -348,13 +352,19 @@ const viewbox = computed(() => {
           :height="task.height.toString()"
           class="task-content"
         >
-          <div class="task">
-            <div
-              class="task-header"
-              v-on:dblclick="() => (state.editTaskID = task.id)"
-            >
-              ({{ level.get(task.id) }})
-              {{ task.title }}
+          <div class="task" v-on:dblclick="() => (state.editTaskID = task.id)">
+            <div style="width: 100%; height: 100%">
+              <div
+                class="task-header"
+                v-on:dblclick.stop="
+                  () => {
+                    task.title = promptInput(task.title);
+                  }
+                "
+              >
+                ({{ level.get(task.id) }})
+                {{ task.title }}
+              </div>
             </div>
             <div class="task-actions">
               <button
