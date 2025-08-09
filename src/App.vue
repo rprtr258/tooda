@@ -306,7 +306,7 @@ function promptInput(value: string): string {
           refY="3.5"
           orient="auto"
         >
-          <polygon points="0 0, 10 3.5, 0 7" fill="#7e57c2" />
+          <polygon points="0 0, 10 3.5, 0 7" fill="var(--task-edge)" />
         </marker>
       </defs>
       <line
@@ -452,13 +452,13 @@ body {
 .btn-group-2 {
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn-group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   position: absolute;
   top: 20px;
   left: 20px;
@@ -476,6 +476,7 @@ button {
   color: var(--menu-button-fg);
   border: none;
   padding: 10px;
+  max-height: 40px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
@@ -490,12 +491,8 @@ button:hover {
 }
 
 #help-btn {
-  width: 44px;
-  background: var(--help-button-bg);
-}
-
-#help-btn:hover {
-  background: var(--help-button-bg-hover);
+  width: 40px;
+  height: 40px;
 }
 
 #dag-svg {

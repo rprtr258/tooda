@@ -1,22 +1,21 @@
 body {
-  --background: #16213e;
+  --background: #161c26;
   --foreground: #e6e6e6;
-  --modal-bg: rgba(26, 26, 46, 0.95);
-  --modal-border: #4a4a72;
 
-  --menu-button-bg: #4a4a72;
-  --menu-button-bg-hover: #5a5a8a;
-  --menu-button-fg: white;
-  --help-button-bg: #00b4d8;
-  --help-button-bg-hover: #0096c7;
-  --modal-close-button-bg: rgb(120, 120, 170);
-  --modal-close-button-bg-hover: #9595cd;
+  --modal-bg: rgba(13, 17, 23, 0.95);
+  --modal-border: #2d3748;
+  --modal-close-button-bg: #6b7280;
+  --modal-close-button-bg-hover: #9ca3af;
+
+  --menu-button-bg: #1f2937;
+  --menu-button-bg-hover: #374151;
+  --menu-button-fg: #f9fafb;
 
   --task-border: #333;
   --task-fg: black;
-  --task-blocked-bg: #f44336;
+  --task-blocked-bg: #ef4444;
   --task-pending-bg: #ffd700;
-  --task-completed-bg: #4caf50;
-  --task-edge: #7e57c2;
-  --task-edge-connecting: #64ffda;
+  --task-completed-bg: #22c55e;
+  --task-edge: #464399;
+  --task-edge-connecting: #06b6d4;
 }
