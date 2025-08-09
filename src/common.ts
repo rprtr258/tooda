@@ -75,6 +75,22 @@ export function apply([m0, m1, m2]: Mat3, v2: Vec2): Vec2 {
   return [x / z, y / z];
 }
 
+export function sub(v1: Vec2, v2: Vec2): Vec2 {
+  return [v1[0] - v2[0], v1[1] - v2[1]];
+}
+
+export function add(v1: Vec2, v2: Vec2): Vec2 {
+  return [v1[0] + v2[0], v1[1] + v2[1]];
+}
+
+export function mul(v: Vec2, k: number): Vec2 {
+  return [v[0] * k, v[1] * k];
+}
+
+export function len(v: Vec2): number {
+  return Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+}
+
 export type Rectangle = {
   at: Vec2;
   width: number;

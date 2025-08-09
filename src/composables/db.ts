@@ -9,6 +9,7 @@ import {
   eye,
   invert,
   scale,
+  sub,
   translate,
 } from '../common';
 
@@ -264,8 +265,22 @@ export function useDB() {
       .map(({from, to}) => {
         const fromTask = db.value.tasks.get(from)!;
         const toTask = db.value.tasks.get(to)!;
+
+        // "grow" boxes a bit before finding connection line coords
+        const grow = 7;
+        const from2: Rectangle = {
+          at: sub(fromTask.at, [grow, grow]),
+          width: fromTask.width + grow * 2,
+          height: fromTask.height + grow * 2,
+        };
+        const to2: Rectangle = {
+          at: sub(toTask.at, [grow, grow]),
+          width: toTask.width + grow * 2,
+          height: toTask.height + grow * 2,
+        };
+
         // Calculate closest points on task borders
-        return clipLineBetweenRectangles(fromTask, toTask);
+        return clipLineBetweenRectangles(from2, to2);
       });
   });
 
