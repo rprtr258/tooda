@@ -1,0 +1,22 @@
+body {
+  --background: #16213e;
+  --foreground: #e6e6e6;
+  --modal-bg: rgba(26, 26, 46, 0.95);
+  --modal-border: #4a4a72;
+
+  --menu-button-bg: #4a4a72;
+  --menu-button-bg-hover: #5a5a8a;
+  --menu-button-fg: white;
+  --help-button-bg: #00b4d8;
+  --help-button-bg-hover: #0096c7;
+  --modal-close-button-bg: rgb(120, 120, 170);
+  --modal-close-button-bg-hover: #9595cd;
+
+  --task-border: #333;
+  --task-fg: black;
+  --task-blocked-bg: #f44336;
+  --task-pending-bg: #ffd700;
+  --task-completed-bg: #4caf50;
+  --task-edge: #7e57c2;
+  --task-edge-connecting: #64ffda;
+}

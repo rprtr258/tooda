@@ -329,7 +329,6 @@ function promptInput(value: string): string {
         v-for="[id, task] of db.tasks.entries()"
         :key="id"
         :transform="`translate(${task.at[0]}, ${task.at[1]})`"
-        class="task-group"
         v-on:mousedown.stop="
           (e: MouseEvent) => handleTaskMouseDownDrag(e, task.id)
         "
@@ -434,8 +433,8 @@ function promptInput(value: string): string {
 body {
   overflow: hidden;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  color: #e6e6e6;
+  background: var(--background);
+  color: var(--foreground);
   height: 100vh;
   width: 100vw;
 }
@@ -464,17 +463,17 @@ body {
   top: 20px;
   left: 20px;
   z-index: 10;
-  background: rgba(30, 30, 46, 0.8);
+  background: rgba(30, 30, 30, 0.8);
   border-radius: 10px;
   padding: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(5px);
   max-width: 300px;
 }
 
 button {
-  background: #4a4a72;
-  color: white;
+  background: var(--menu-button-bg);
+  color: var(--menu-button-fg);
   border: none;
   padding: 10px;
   border-radius: 6px;
@@ -487,16 +486,16 @@ button {
 }
 
 button:hover {
-  background: #5a5a8a;
+  background: var(--menu-button-bg-hover);
 }
 
 #help-btn {
   width: 44px;
-  background: #00b4d8;
+  background: var(--help-button-bg);
 }
 
 #help-btn:hover {
-  background: #0096c7;
+  background: var(--help-button-bg-hover);
 }
 
 #dag-svg {
@@ -520,15 +519,10 @@ button:hover {
 }
 
 .task-rect {
-  stroke: #444;
+  stroke: var(--task-border);
   stroke-width: 2;
   rx: 8;
   ry: 8;
-  cursor: move;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
-}
-
-.task-group {
   cursor: move;
 }
 
@@ -537,29 +531,22 @@ button:hover {
 }
 
 .task-pending {
-  fill: #ffd700;
+  fill: var(--task-pending-bg);
 }
 
 .task-completed {
-  fill: #4caf50;
+  fill: var(--task-completed-bg);
 }
 
 .task-blocked {
-  fill: #f44336;
+  fill: var(--task-blocked-bg);
 }
 
 .task-header {
   font-weight: 600;
   font-size: 16px;
-  color: black;
+  color: var(--task-fg);
   padding: 8px 12px 4px;
-  flex-grow: 1;
-}
-
-.task-description {
-  font-size: 14px;
-  color: #444;
-  padding: 8px 12px;
   flex-grow: 1;
 }
 
@@ -575,7 +562,7 @@ button:hover {
 .delete-btn {
   height: 1.8rem;
   background: rgb(0, 0, 0, 0.2);
-  color: black;
+  color: var(--task-fg);
   font-weight: bold;
   justify-content: center;
   cursor: pointer;
@@ -605,15 +592,15 @@ button:hover {
 }
 
 .edge {
-  stroke: #7e57c2;
+  stroke: var(--task-edge);
   stroke-width: 3;
   marker-end: url(#arrowhead);
 }
 
 .connecting-line {
-  stroke: #64ffda;
+  stroke: var(--task-edge-connecting);
   stroke-width: 2;
-  stroke-dasharray: 5, 5;
+  stroke-dasharray: 9, 3;
 }
 
 #help-modal {
@@ -621,39 +608,21 @@ button:hover {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(26, 26, 46, 0.95);
-  border: 1px solid #4a4a72;
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
   border-radius: 12px;
   padding: 20px;
   width: 60%;
   z-index: 20;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-}
-
-#task-modal {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(26, 26, 46, 0.95);
-  border: 1px solid #4a4a72;
-  border-radius: 12px;
-  padding: 20px;
-  width: 80%;
-  z-index: 40;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
 }
 
 .zoom-controls {
-  background: rgba(30, 30, 46, 0.8);
   border-radius: 8px;
   display: flex;
   flex-direction: row;
   gap: 8px;
   z-index: 10;
-  backdrop-filter: blur(5px);
 }
 
 .zoom-btn {

@@ -117,13 +117,13 @@ h2 {
   text-align: center;
 }
 .pending {
-  color: #ffd700;
+  color: var(--task-pending-bg);
 }
 .completed {
-  color: #4caf50;
+  color: var(--task-completed-bg);
 }
 .blocked {
-  color: #f44336;
+  color: var(--task-blocked-bg);
 }
 .task-item {
   font-weight: bold;
@@ -147,7 +147,7 @@ h2 {
 }
 
 #close-btn {
-  background: rgb(120, 120, 170);
+  background: var(--modal-close-button-bg);
   height: 2em;
   aspect-ratio: 1;
   border: none;
@@ -155,7 +155,7 @@ h2 {
 }
 
 #close-btn:hover {
-  background: #9575cd;
+  background: var(--modal-close-button-bg-hover);
 }
 
 #task-modal {
@@ -163,13 +163,11 @@ h2 {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(26, 26, 46, 0.95);
-  border: 1px solid #4a4a72;
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
   border-radius: 12px;
   padding: 20px;
   width: 80%;
   z-index: 40;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
 }
 </style>

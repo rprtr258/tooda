@@ -89,7 +89,6 @@ const emit = defineEmits<{
 }
 
 .header {
-  color: #64ffda;
   margin-bottom: 10px;
   text-align: center;
 }
@@ -103,7 +102,7 @@ const emit = defineEmits<{
   border-collapse: collapse;
 }
 #help-table td {
-  border: 1px solid #4a4a72;
+  border: 1px solid var(--modal-border);
 }
 #help-table tr :first-child {
   font-weight: bold;
@@ -114,29 +113,29 @@ const emit = defineEmits<{
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  color: black;
+  color: var(--task-fg);
   font-weight: bold;
   padding: 0px 4px;
 }
 .pending-color {
-  background: #ffd700;
+  background: var(--task-pending-bg);
 }
 .completed-color {
-  background: #4caf50;
+  background: var(--task-completed-bg);
 }
 .blocked-color {
-  background: #f44336;
+  background: var(--task-blocked-bg);
 }
 
 #close-help {
-  background: #7e57c2;
+  background: var(--modal-close-button-bg);
   width: 100%;
   height: 40px;
   justify-content: center;
 }
 
 #close-help:hover {
-  background: #9575cd;
+  background: var(--modal-close-button-bg-hover);
 }
 
 #status-table {
