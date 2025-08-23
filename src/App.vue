@@ -272,14 +272,14 @@ function promptInput(value: string): string {
         <button class="zoom-btn" title="Import tasks" v-on:click="importTasks">
           <IconLoad />
         </button>
+        <button
+          class="zoom-btn"
+          title="Show board"
+          v-on:click="() => showKanban.on()"
+        >
+          <IconBoard />
+        </button>
       </div>
-      <button
-        class="zoom-btn"
-        title="Show board"
-        v-on:click="() => showKanban.on()"
-      >
-        <IconBoard />
-      </button>
     </div>
 
     <svg
