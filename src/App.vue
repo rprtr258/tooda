@@ -18,7 +18,7 @@ import TaskModal from './components/TaskModal.vue';
 import HelperModal from './components/HelperModal.vue';
 // composables
 import {useBool} from './composables/bool';
-import {useDB, TaskID} from './composables/db';
+import {useDB, TaskID, Task} from './composables/db';
 import {
   apply,
   compose,
@@ -28,6 +28,7 @@ import {
   translate,
   Vec2,
 } from './common';
+import IconBoard from './components/icons/IconBoard.vue';
 
 const {x: mousex, y: mousey} = useMouse();
 const {
@@ -49,8 +50,8 @@ function zoomUpdate(coeff: number): void {
   zoom([w.innerWidth / 2, w.innerHeight / 2], coeff);
 }
 
+const showKanban = useBool();
 const showHelperModal = useBool();
-const showTodos = useBool();
 
 const state = reactive<{
   state:
@@ -196,11 +197,19 @@ function handleWheelZoom(e: WheelEvent) {
   zoom([e.clientX, e.clientY], -e.deltaY);
 }
 
-const readyTasks = computed(() => {
-  return [...db.value.tasks.values()]
-    .filter((task) => task.status === 'pending')
-    .map((task) => task.id)
-    .sort((a, b) => a - b);
+const tasksByStatus = computed(() => {
+  const res: Record<Task['status'], TaskID[]> = {
+    blocked: [],
+    completed: [],
+    pending: [],
+  };
+  for (const task of db.value.tasks.values()) {
+    res[task.status].push(task.id);
+  }
+  for (const tasks of Object.values(res)) {
+    tasks.sort((a, b) => a - b);
+  }
+  return res;
 });
 
 function exportTasks() {
@@ -228,6 +237,7 @@ function promptInput(value: string): string {
 <template>
   <div
     id="app-container"
+    v-if="!showKanban.value.value"
     v-on:mousemove="handleMouseMove"
     v-on:mouseup="handleMouseUp"
   >
@@ -263,30 +273,13 @@ function promptInput(value: string): string {
           <IconLoad />
         </button>
       </div>
-      <div style="max-width: 40em">
-        <div v-on:click="() => showTodos.toggle()" style="cursor: pointer">
-          TODO {{ showTodos.value.value ? 'v' : '>' }}
-        </div>
-        <div
-          v-if="showTodos.value.value"
-          style="
-            height: calc(100vh - 20em);
-            overflow-y: scroll;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-          "
-        >
-          <div
-            v-for="id in readyTasks"
-            :key="id"
-            v-on:click="() => (state.editTaskID = id)"
-            style="background: rgb(0, 0, 0, 0.3); padding: 5px; cursor: pointer"
-          >
-            <a> {{ db.tasks.get(id)!.title }} (#{{ id }}) </a>
-          </div>
-        </div>
-      </div>
+      <button
+        class="zoom-btn"
+        title="Show board"
+        v-on:click="() => showKanban.on()"
+      >
+        <IconBoard />
+      </button>
     </div>
 
     <svg
@@ -400,26 +393,88 @@ function promptInput(value: string): string {
         </foreignObject>
       </g>
     </svg>
-
-    <div
-      v-if="state.editTaskID || showHelperModal.value.value"
-      class="backdrop"
-      v-on:click="
-        () => {
-          state.editTaskID = undefined;
-          showHelperModal.off();
-        }
-      "
-    ></div>
-    <TaskModal
-      v-if="state.editTaskID"
-      :taskID="state.editTaskID"
-      v-on:close="() => (state.editTaskID = undefined)"
-      v-on:reselect="(id) => (state.editTaskID = id)"
-    />
-    <div id="help-modal" v-if="showHelperModal.value.value">
-      <HelperModal v-on:close="() => showHelperModal.off()" />
+  </div>
+  <div
+    id="app-container"
+    v-else
+    v-on:mousemove="handleMouseMove"
+    v-on:mouseup="handleMouseUp"
+  >
+    <button
+      title="Close"
+      style="position: absolute; top: 0; right: 0; z-index: 1"
+      v-on:click="() => showKanban.off()"
+    >
+      X
+    </button>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr">
+      <div class="board-pane" style="background-color: var(--task-blocked-bg)">
+        <div class="board-pane-header">BLOCKED</div>
+        <div class="board-pane-list">
+          <div
+            v-for="id in tasksByStatus.blocked"
+            :key="id"
+            v-on:click="() => (state.editTaskID = id)"
+            class="board-item"
+          >
+            <a> {{ db.tasks.get(id)!.title }} (#{{ id }}) </a>
+          </div>
+          <div style="height: 3em"></div>
+        </div>
+      </div>
+      <div class="board-pane" style="background-color: var(--task-pending-bg)">
+        <div class="board-pane-header">TODO</div>
+        <div class="board-pane-list">
+          <div
+            v-for="id in tasksByStatus.pending"
+            :key="id"
+            v-on:click="() => (state.editTaskID = id)"
+            class="board-item"
+          >
+            <a> {{ db.tasks.get(id)!.title }} (#{{ id }}) </a>
+          </div>
+          <div style="height: 3em"></div>
+        </div>
+      </div>
+      <div
+        class="board-pane"
+        style="background-color: var(--task-completed-bg)"
+      >
+        <div class="board-pane-header">DONE</div>
+        <div class="board-pane-list">
+          <div
+            v-for="id in tasksByStatus.completed"
+            :key="id"
+            v-on:click="() => (state.editTaskID = id)"
+            class="board-item"
+          >
+            <a> {{ db.tasks.get(id)!.title }} (#{{ id }}) </a>
+          </div>
+          <div style="height: 3em"></div>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <div
+    v-if="state.editTaskID || showHelperModal.value.value"
+    class="backdrop"
+    v-on:click="
+      () => {
+        state.editTaskID = undefined;
+        showHelperModal.off();
+      }
+    "
+  ></div>
+  <TaskModal
+    v-if="state.editTaskID"
+    :taskID="state.editTaskID"
+    v-on:close="() => (state.editTaskID = undefined)"
+    v-on:complete="() => toggleTaskCompletion(state.editTaskID!)"
+    v-on:reselect="(id) => (state.editTaskID = id)"
+  />
+  <div id="help-modal" v-if="showHelperModal.value.value">
+    <HelperModal v-on:close="() => showHelperModal.off()" />
   </div>
 </template>
 
@@ -635,11 +690,40 @@ button:hover {
 }
 
 .backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
   background-color: rgb(0, 0, 0, 0.8);
   width: 100vw;
   height: 100vh;
-  position: absolute;
   backdrop-filter: blur(9px);
   z-index: 11;
+}
+
+.board-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  filter: brightness(0.9);
+}
+.board-pane-header {
+  text-align: center;
+  height: 1.5em;
+  align-content: center;
+  color: black;
+  font-weight: bold;
+}
+.board-pane-list {
+  overflow-y: scroll;
+  max-height: 100vh;
+}
+.board-item {
+  margin-bottom: 5px;
+  background: rgb(0, 0, 0, 0.3);
+  padding: 5px;
+  cursor: pointer;
+}
+.board-item:hover {
+  background: rgb(0, 0, 0, 0.5);
 }
 </style>

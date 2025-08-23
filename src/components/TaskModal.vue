@@ -8,6 +8,7 @@ const {taskID} = defineProps<{
 }>();
 const emit = defineEmits<{
   close: [];
+  complete: [];
   reselect: [id: TaskID];
 }>();
 
@@ -44,7 +45,7 @@ onMounted(() => {
 <template>
   <div id="task-modal" v-on:click="() => (editing = false)">
     <h2
-      style="display: flex; cursor: text"
+      style="display: flex; cursor: text; gap: 0.2em"
       :class="statusClass[task.status]"
       :title="task.status + ' status'"
     >
@@ -53,6 +54,14 @@ onMounted(() => {
         v-on:click="() => (task.title = promptInput(task.title))"
         >{{ task.title }} (#{{ task.id }})</span
       >
+      <button
+        v-if="task.status !== 'blocked'"
+        id="close-btn"
+        title="Complete"
+        v-on:click="emit('complete')"
+      >
+        {{ task.status === 'completed' ? 'Cancel' : 'Complete' }}
+      </button>
       <button id="close-btn" title="Close" v-on:click="emit('close')">X</button>
     </h2>
     <div
@@ -152,6 +161,7 @@ h2 {
   aspect-ratio: 1;
   border: none;
   justify-content: center;
+  padding: 3px;
 }
 
 #close-btn:hover {
