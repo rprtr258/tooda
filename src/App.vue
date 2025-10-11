@@ -4,15 +4,18 @@ import {computed, reactive, useTemplateRef} from 'vue';
 import {useMouse} from '@vueuse/core';
 // local
 // icons
-import IconLink from './components/icons/IconLink.vue';
-import IconTrash from './components/icons/IconTrash.vue';
-import IconPlus from './components/icons/IconPlus.vue';
+import IconBoard from './components/icons/IconBoard.vue';
+import IconEyeClose from './components/icons/IconEyeClose.vue';
+import IconEyeOpen from './components/icons/IconEyeOpen.vue';
 import IconHelp from './components/icons/IconHelp.vue';
-import IconZoomReset from './components/icons/IconZoomReset.vue';
-import IconZoomOut from './components/icons/IconZoomOut.vue';
-import IconZoomIn from './components/icons/IconZoomIn.vue';
-import IconSave from './components/icons/IconSave.vue';
+import IconLink from './components/icons/IconLink.vue';
 import IconLoad from './components/icons/IconLoad.vue';
+import IconPlus from './components/icons/IconPlus.vue';
+import IconSave from './components/icons/IconSave.vue';
+import IconTrash from './components/icons/IconTrash.vue';
+import IconZoomIn from './components/icons/IconZoomIn.vue';
+import IconZoomOut from './components/icons/IconZoomOut.vue';
+import IconZoomReset from './components/icons/IconZoomReset.vue';
 // components
 import TaskModal from './components/TaskModal.vue';
 import HelperModal from './components/HelperModal.vue';
@@ -28,7 +31,6 @@ import {
   translate,
   Vec2,
 } from './common';
-import IconBoard from './components/icons/IconBoard.vue';
 
 const {x: mousex, y: mousey} = useMouse();
 const {
@@ -42,6 +44,8 @@ const {
   zoom,
   serializer,
   level,
+  toggleHideDone,
+  shownTasks,
 } = useDB();
 
 const svg = useTemplateRef('dag-svg');
@@ -247,11 +251,19 @@ function promptInput(value: string): string {
           <IconHelp />
         </button>
         <button
+          id="help-btn"
           title="Add task"
           v-on:click="() => createTask([w.innerWidth / 2, w.innerHeight / 2])"
-          style="flex-grow: 1; justify-content: center"
         >
           <IconPlus />
+        </button>
+        <button
+          id="help-btn"
+          :title="db.hideDone ? 'Show completed' : 'Hide completed'"
+          v-on:click="() => toggleHideDone()"
+        >
+          <IconEyeClose v-if="db.hideDone" />
+          <IconEyeOpen v-else />
         </button>
       </div>
       <div class="zoom-controls">
@@ -319,8 +331,8 @@ function promptInput(value: string): string {
         class="connecting-line"
       />
       <g
-        v-for="[id, task] of db.tasks.entries()"
-        :key="id"
+        v-for="task of shownTasks"
+        :key="task.id"
         :transform="`translate(${task.at[0]}, ${task.at[1]})`"
         v-on:mousedown.stop="
           (e: MouseEvent) => handleTaskMouseDownDrag(e, task.id)

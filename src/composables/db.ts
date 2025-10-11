@@ -98,6 +98,7 @@ export function useDB() {
     tasks: Map<TaskID, Task>;
     nextTaskId: 1;
     view: Mat3;
+    hideDone?: boolean;
   };
   const serializer = {
     read: (s: string): DB => {
@@ -110,6 +111,7 @@ export function useDB() {
         tasks: [...db.tasks.values()],
         nextTaskId: db.nextTaskId,
         view: db.view,
+        hideDone: db.hideDone || false,
       }),
   };
   const db = useStorage<DB>(
@@ -257,10 +259,24 @@ export function useDB() {
     }
   }
 
+  const shownTasks = computed(() => {
+    const tasks = [...db.value.tasks.values()];
+    if (db.value.hideDone) {
+      return tasks.filter((t) => t.status !== 'completed');
+    }
+    return tasks;
+  });
+
   const edgesCoords = computed(() => {
-    return [...db.value.tasks.values()]
+    return shownTasks.value
       .flatMap((task) =>
-        task.dependencies.map((dep) => ({from: dep, to: task.id})),
+        task.dependencies
+          .map((dep) => ({from: dep, to: task.id}))
+          .filter(
+            ({from, to}) =>
+              !db.value.hideDone ||
+              db.value.tasks.get(from)!.status !== 'completed',
+          ),
       )
       .map(({from, to}) => {
         const fromTask = db.value.tasks.get(from)!;
@@ -326,6 +342,10 @@ export function useDB() {
     return levels;
   });
 
+  const toggleHideDone = () => {
+    db.value.hideDone = !(db.value.hideDone ?? false);
+  };
+
   return {
     db,
     edgesCoords,
@@ -337,5 +357,7 @@ export function useDB() {
     zoom,
     serializer,
     level,
+    toggleHideDone,
+    shownTasks,
   };
 }
