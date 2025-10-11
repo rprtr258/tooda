@@ -295,7 +295,7 @@ function promptInput(value: string): string {
           id="arrowhead"
           markerWidth="10"
           markerHeight="7"
-          refX="9"
+          refX="8"
           refY="3.5"
           orient="auto"
         >

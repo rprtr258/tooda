@@ -266,13 +266,13 @@ export function useDB() {
         const fromTask = db.value.tasks.get(from)!;
         const toTask = db.value.tasks.get(to)!;
 
-        // "grow" boxes a bit before finding connection line coords
-        const grow = 7;
         const from2: Rectangle = {
-          at: sub(fromTask.at, [grow, grow]),
-          width: fromTask.width + grow * 2,
-          height: fromTask.height + grow * 2,
+          at: fromTask.at,
+          width: fromTask.width,
+          height: fromTask.height,
         };
+        // "grow" box a bit before finding connection line coords
+        const grow = 6;
         const to2: Rectangle = {
           at: sub(toTask.at, [grow, grow]),
           width: toTask.width + grow * 2,
