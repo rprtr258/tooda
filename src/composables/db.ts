@@ -1,5 +1,6 @@
 import { computed, watchEffect } from "vue";
 import { useStorage } from "@vueuse/core";
+import { getBoxToBoxArrow } from "curved-arrows";
 import {
   Mat3,
   Rectangle,
@@ -10,7 +11,6 @@ import {
   eye,
   invert,
   scale,
-  sub,
   translate,
 } from "../common";
 
@@ -24,76 +24,6 @@ export type Task = {
   status: "pending" | "completed" | "blocked";
   at: Vec2;
 };
-
-function clipLineBetweenRectangles(
-  rect1: Rectangle,
-  rect2: Rectangle,
-): {start: Vec2; end: Vec2} {
-  const p0 = {
-    x: rect1.at[0] + rect1.width / 2,
-    y: rect1.at[1] + rect1.height / 2,
-  };
-  const p1 = {
-    x: rect2.at[0] + rect2.width / 2,
-    y: rect2.at[1] + rect2.height / 2,
-  };
-
-  const dx = p1.x - p0.x;
-  const dy = p1.y - p0.y;
-
-  // Function to find the first intersection of the segment (p0, p1) with the rect
-  function intersectRect(rect: Rectangle): Vec2 {
-    const minX = rect.at[0];
-    const maxX = rect.at[0] + rect.width;
-    const minY = rect.at[1];
-    const maxY = rect.at[1] + rect.height;
-
-    const tValues: number[] = [];
-    if (dx !== 0) {
-      // Check left edge
-      const t = (minX - p0.x) / dx;
-      const y = p0.y + t * dy;
-      if (t >= 0 && t <= 1 && y >= minY && y <= maxY) {
-        tValues.push(t);
-      }
-    }
-    if (dx !== 0) {
-      // Check right edge
-      const t = (maxX - p0.x) / dx;
-      const y = p0.y + t * dy;
-      if (t >= 0 && t <= 1 && y >= minY && y <= maxY) {
-        tValues.push(t);
-      }
-    }
-    if (dy !== 0) {
-      // Check top edge
-      const t = (minY - p0.y) / dy;
-      const x = p0.x + t * dx;
-      if (t >= 0 && t <= 1 && x >= minX && x <= maxX) {
-        tValues.push(t);
-      }
-    }
-    if (dy !== 0) {
-      // Check bottom edge
-      const t = (maxY - p0.y) / dy;
-      const x = p0.x + t * dx;
-      if (t >= 0 && t <= 1 && x >= minX && x <= maxX) {
-        tValues.push(t);
-      }
-    }
-    if (tValues.length === 0) {
-      return [(minX + maxX) / 2, (minY + maxY) / 2];
-    }
-
-    const t = Math.min(...tValues);
-    return [p0.x + t * dx, p0.y + t * dy];
-  }
-
-  return {
-    start: intersectRect(rect1),
-    end: intersectRect(rect2),
-  };
-}
 
 function calculateTaskDimensions(title: string): Size {
   const ratio = 6 / 2;
@@ -312,21 +242,10 @@ export function useDB() {
 
         const {width: fromWidth, height: fromHeight} = calculateTaskDimensions(fromTask.title);
         const {width: toWidth, height: toHeight} = calculateTaskDimensions(toTask.title);
-        const from2: Rectangle = {
-          at: fromTask.at,
-          width: fromWidth,
-          height: fromHeight,
-        };
-        // "grow" box a bit before finding connection line coords
-        const grow = 6;
-        const to2: Rectangle = {
-          at: sub(toTask.at, [grow, grow]),
-          width: toWidth + grow * 2,
-          height: toHeight + grow * 2,
-        };
 
-        // Calculate closest points on task borders
-        return clipLineBetweenRectangles(from2, to2);
+        return getBoxToBoxArrow(
+          fromTask.at[0], fromTask.at[1], fromWidth, fromHeight,
+          toTask.at[0], toTask.at[1], toWidth, toHeight);
       });
   });
 
