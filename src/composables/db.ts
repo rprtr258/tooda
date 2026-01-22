@@ -1,8 +1,9 @@
-import {computed, watchEffect} from 'vue';
-import {useStorage} from '@vueuse/core';
+import { computed, watchEffect } from "vue";
+import { useStorage } from "@vueuse/core";
 import {
   Mat3,
   Rectangle,
+  Size,
   Vec2,
   apply,
   compose,
@@ -11,16 +12,17 @@ import {
   scale,
   sub,
   translate,
-} from '../common';
+} from "../common";
 
 export type TaskID = number;
 
-export type Task = Rectangle & {
+export type Task = {
   id: TaskID;
   title: string;
   description: string;
   dependencies: TaskID[];
-  status: 'pending' | 'completed' | 'blocked';
+  status: "pending" | "completed" | "blocked";
+  at: Vec2;
 };
 
 function clipLineBetweenRectangles(
@@ -93,6 +95,19 @@ function clipLineBetweenRectangles(
   };
 }
 
+function calculateTaskDimensions(title: string): Size {
+  const ratio = 6 / 2;
+  const charWidth = 10; // Approximate width per character (increased for better visibility)
+  const lineHeight = 24; // Line height for text
+  const padding = 16; // Padding around text
+
+  const N = title.length + 4;
+  const cols = Math.floor(Math.sqrt(ratio * lineHeight / charWidth * N));
+  const width = charWidth * (cols + 1) + 2 * padding;
+  const height = lineHeight * Math.floor(N / cols) + 2 * padding;
+  return {width, height};
+}
+
 export function useDB() {
   type DB = {
     tasks: Map<TaskID, Task>;
@@ -103,7 +118,13 @@ export function useDB() {
   const serializer = {
     read: (s: string): DB => {
       const raw = JSON.parse(s);
-      raw.tasks = new Map(raw.tasks.map((v: Task) => [Number(v.id), v]));
+      // Convert array to Map and recalculate dimensions for all tasks
+      raw.tasks = new Map(
+        raw.tasks.map((v: Task) => {
+          const task = { ...v };
+          return [Number(task.id), task];
+        }),
+      );
       return raw;
     },
     write: (db: DB): string =>
@@ -115,7 +136,7 @@ export function useDB() {
       }),
   };
   const db = useStorage<DB>(
-    'dag-db',
+    "dag-db",
     {
       tasks: new Map(),
       nextTaskId: 1,
@@ -127,6 +148,17 @@ export function useDB() {
     },
   );
 
+  const rects = computed(() => {
+    const entries: Iterable<[TaskID, Size]> = [...db
+      .value
+      .tasks
+      .values()]
+      .map(task => [
+        task.id,
+        calculateTaskDimensions(task.title),
+      ]);
+    return new Map<TaskID, Size>(entries);
+  });
   const isDAG = computed((): boolean => {
     enum State {
       Unvisited = 0,
@@ -178,31 +210,29 @@ export function useDB() {
   // update task statuses
   watchEffect(() => {
     for (const task of db.value.tasks.values()) {
-      if (task.status === 'completed') {
+      if (task.status === "completed") {
         continue;
       }
 
       const allDependenciesCompleted = task.dependencies.every(
-        (depId) => db.value.tasks.get(depId)?.status === 'completed',
+        (depId) => db.value.tasks.get(depId)?.status === "completed",
       );
-      task.status = allDependenciesCompleted ? 'pending' : 'blocked';
+      task.status = allDependenciesCompleted ? "pending" : "blocked";
     }
   });
 
   const createTask = (pt: Vec2): TaskID => {
     const id = db.value.nextTaskId++;
-    const width = 220;
-    const height = 160;
+    const title = `Task ${id}`;
+
     const v: Vec2 = apply(db.value.view, pt);
     db.value.tasks.set(id, {
       id,
-      at: [v[0] - width / 2, v[1] - height / 2],
-      width,
-      height,
-      title: `Task ${id}`,
-      description: '',
+      at: v,
+      title,
+      description: "",
       dependencies: [],
-      status: 'pending',
+      status: "pending",
     });
     return id;
   };
@@ -228,14 +258,14 @@ export function useDB() {
   const toggleTaskCompletion = (id: TaskID): void => {
     const task = db.value.tasks.get(id)!;
     switch (task.status) {
-      case 'completed':
-        task.status = 'pending';
+      case "completed":
+        task.status = "pending";
         break;
-      case 'pending':
-        task.status = 'completed';
+      case "pending":
+        task.status = "completed";
         break;
-      case 'blocked':
-        alert('Task is blocked');
+      case "blocked":
+        alert("Task is blocked");
         break;
     }
   };
@@ -249,7 +279,7 @@ export function useDB() {
     if (!deps.includes(fromId)) {
       deps.push(fromId);
       if (!isDAG.value) {
-        alert('LOOP FOUND');
+        alert("LOOP FOUND");
         deps.pop();
       }
     } else {
@@ -262,7 +292,7 @@ export function useDB() {
   const shownTasks = computed(() => {
     const tasks = [...db.value.tasks.values()];
     if (db.value.hideDone) {
-      return tasks.filter((t) => t.status !== 'completed');
+      return tasks.filter((t) => t.status !== "completed");
     }
     return tasks;
   });
@@ -271,28 +301,28 @@ export function useDB() {
     return shownTasks.value
       .flatMap((task) =>
         task.dependencies
-          .map((dep) => ({from: dep, to: task.id}))
-          .filter(
-            ({from, to}) =>
-              !db.value.hideDone ||
-              db.value.tasks.get(from)!.status !== 'completed',
-          ),
+          .map(dep => ({ from: dep, to: task.id }))
+          .filter(({from}) =>
+            !db.value.hideDone ||
+            db.value.tasks.get(from)!.status !== "completed"),
       )
       .map(({from, to}) => {
         const fromTask = db.value.tasks.get(from)!;
         const toTask = db.value.tasks.get(to)!;
 
+        const {width: fromWidth, height: fromHeight} = calculateTaskDimensions(fromTask.title);
+        const {width: toWidth, height: toHeight} = calculateTaskDimensions(toTask.title);
         const from2: Rectangle = {
           at: fromTask.at,
-          width: fromTask.width,
-          height: fromTask.height,
+          width: fromWidth,
+          height: fromHeight,
         };
         // "grow" box a bit before finding connection line coords
         const grow = 6;
         const to2: Rectangle = {
           at: sub(toTask.at, [grow, grow]),
-          width: toTask.width + grow * 2,
-          height: toTask.height + grow * 2,
+          width: toWidth + grow * 2,
+          height: toHeight + grow * 2,
         };
 
         // Calculate closest points on task borders
@@ -314,7 +344,7 @@ export function useDB() {
   const level = computed(() => {
     if (!isDAG.value) return new Map();
 
-    const allIDs = new Set<TaskID>([...db.value.tasks.keys()]);
+    const allIDs = new Set<TaskID>(db.value.tasks.keys());
     const depIDs = new Set<TaskID>(
       [...db.value.tasks.values()].flatMap((t) => t.dependencies),
     );
@@ -349,6 +379,7 @@ export function useDB() {
   return {
     db,
     edgesCoords,
+    rects,
     createTask,
     deleteTask,
     toggleTaskCompletion,

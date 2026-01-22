@@ -91,11 +91,14 @@ export function len(v: Vec2): number {
   return Math.sqrt(v[0] * v[0] + v[1] * v[1]);
 }
 
-export type Rectangle = {
-  at: Vec2;
+export type Size = {
   width: number;
   height: number;
 };
+
+export type Rectangle = {
+  at: Vec2;
+} & Size;
 
 export function download(filename: string, text: string): void {
   const el = document.createElement('a');
@@ -119,7 +122,8 @@ export async function load(): Promise<string> {
       if (file) {
         const reader = new FileReader();
         reader.onload = function (e) {
-          resolve(e.target!.result?.toString()!);
+          const result = e.target!.result?.toString();
+          resolve(result || '');
         };
         reader.readAsText(file); // For text files. For binary, we might use readAsArrayBuffer, etc.
       }

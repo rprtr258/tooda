@@ -10,6 +10,7 @@ import IconEyeOpen from './components/icons/IconEyeOpen.vue';
 import IconHelp from './components/icons/IconHelp.vue';
 import IconLink from './components/icons/IconLink.vue';
 import IconLoad from './components/icons/IconLoad.vue';
+import IconPencil from './components/icons/IconPencil.vue';
 import IconPlus from './components/icons/IconPlus.vue';
 import IconSave from './components/icons/IconSave.vue';
 import IconTrash from './components/icons/IconTrash.vue';
@@ -36,6 +37,7 @@ const {x: mousex, y: mousey} = useMouse();
 const {
   db,
   edgesCoords,
+  rects,
   createTask,
   deleteTask,
   toggleTaskCompletion,
@@ -69,11 +71,6 @@ const state = reactive<{
         start: Vec2;
       }
     | {
-        kind: 'resizing';
-        selectedTask: TaskID;
-        start: Vec2;
-      }
-    | {
         kind: 'connecting';
         fromId: TaskID;
         connecting: Vec2;
@@ -91,12 +88,6 @@ watch(
 );
 
 function handleTaskClick(e: MouseEvent, taskId: TaskID) {
-  // Don't activate toolbar on double-click (let it edit title)
-  if (e.detail === 2) {
-    state.activeTaskId = undefined;
-    return;
-  }
-
   // Don't activate toolbar if we're connecting
   if (state.state?.kind === 'connecting') {
     return;
@@ -123,18 +114,6 @@ function handleTaskMouseDownDrag(e: MouseEvent, taskId: TaskID) {
     selectedTask: taskId,
     original: db.value.tasks.get(taskId)!.at,
     start: [e.clientX, e.clientY],
-  };
-}
-
-function handleResizeMouseDown(e: MouseEvent, taskId: TaskID): void {
-  if (state.state !== null) {
-    return;
-  }
-
-  state.state = {
-    kind: 'resizing',
-    selectedTask: taskId,
-    start: db.value.tasks.get(taskId)!.at,
   };
 }
 
@@ -172,14 +151,6 @@ function handleMouseMove(e: MouseEvent) {
       mouse[0] + state.state.original![0] - move[0],
       mouse[1] + state.state.original![1] - move[1],
     ];
-  } else if (state.state.kind === 'resizing') {
-    // Hide toolbar when resizing actually starts
-    state.activeTaskId = undefined;
-
-    const move = apply(m, [e.clientX, e.clientY]);
-    const selTask = db.value.tasks.get(state.state.selectedTask)!;
-    selTask.width = Math.max(100, move[0] - state.state.start![0]);
-    selTask.height = Math.max(80, move[1] - state.state.start![1]);
   } else if (state.state.kind === 'connecting') {
     state.state.connecting = setConnecting(e.clientX, e.clientY);
   }
@@ -200,11 +171,12 @@ function handleMouseUp(e: MouseEvent) {
   const [mouseX, mouseY] = apply(db.value.view, [e.clientX, e.clientY]);
 
   for (const [id, task] of db.value.tasks.entries()) {
+    const {width, height} = rects.value.get(task.id)!;
     if (
       mouseX >= task.at[0] &&
-      mouseX <= task.at[0] + task.width &&
+      mouseX <= task.at[0] + width &&
       mouseY >= task.at[1] &&
-      mouseY <= task.at[1] + task.height
+      mouseY <= task.at[1] + height
     ) {
       connectTasks(state.state.fromId, id);
       break;
@@ -267,34 +239,36 @@ const toolbarPosition = computed(() => {
   if (!activeTask.value || !svg.value) return null;
 
   const task = activeTask.value;
-  const toolbarHeight = 60; // Toolbar height including padding
-  const margin = 10;
-  // Actual toolbar width: 3 buttons (40px each) + gaps (16px) + padding (16px)
+  const toolbarHeight = 50; // Toolbar height including padding
+  // Actual toolbar width: 4 buttons (40px each) + gaps (24px) + padding (16px)
   const toolbarWidth =
-    40 +
-    16 +
-    40 +
+    40 + // delete
+    8 + // gap
+    40 + // edit
+    8 + // gap
+    40 + // connect
     (state.activeTaskId &&
     db.value.tasks.get(state.activeTaskId)?.status !== 'blocked'
-      ? 16 + 40
+      ? 8 + 40 // gap + complete
       : 0);
 
   // Convert task coordinates from SVG to screen
   // Need inverse transformation: SVG -> screen
   const invertedView = invert(db.value.view);
   const taskTopLeft = apply(invertedView, task.at);
+  const {width, height} = rects.value.get(task.id)!;
   const taskBottomRight = apply(invertedView, [
-    task.at[0] + task.width,
-    task.at[1] + task.height,
+    task.at[0] + width,
+    task.at[1] + height,
   ]);
 
   const taskScreenWidth = taskBottomRight[0] - taskTopLeft[0];
 
   // Position above the task in screen coordinates
-  let top = taskTopLeft[1] - toolbarHeight - margin;
+  let top = taskTopLeft[1] - toolbarHeight;
   // If not enough space above, position below
   if (top < 0) {
-    top = taskBottomRight[1] + margin;
+    top = taskBottomRight[1];
   }
 
   const containerWidth = window.innerWidth;
@@ -420,8 +394,8 @@ function promptInput(value: string): string {
       />
       <line
         v-if="state.state?.kind === 'connecting'"
-        :x1="fromTask!.at[0] + fromTask!.width / 2"
-        :y1="fromTask!.at[1] + fromTask!.height / 2"
+        :x1="fromTask!.at[0] + rects.get(fromTask!.id)!.width / 2"
+        :y1="fromTask!.at[1] + rects.get(fromTask!.id)!.height / 2"
         :x2="state.state.connecting[0]"
         :y2="state.state.connecting[1]"
         class="connecting-line"
@@ -435,34 +409,25 @@ function promptInput(value: string): string {
         "
       >
         <rect
-          :width="task.width"
-          :height="task.height"
+          :width="rects.get(task.id)!.width"
+          :height="rects.get(task.id)!.height"
           :class="`task-rect task-${task.status}`"
         />
-        <circle
-          :cx="task.width"
-          :cy="task.height"
-          :r="8"
-          fill="rgba(100, 100, 255, 0.5)"
-          class="resize-handle"
-          v-on:mousedown.stop="(e) => handleResizeMouseDown(e, task.id)"
-        />
+
         <foreignObject
-          :width="task.width.toString()"
-          :height="task.height.toString()"
+          :width="rects.get(task.id)!.width.toString()"
+          :height="rects.get(task.id)!.height.toString()"
           class="task-content"
           v-on:click.stop="(e: MouseEvent) => handleTaskClick(e, task.id)"
+          v-on:dblclick.stop="
+            () => {
+              task.title = promptInput(task.title);
+            }
+          "
         >
-          <div class="task" v-on:dblclick="() => (state.editTaskID = task.id)">
+          <div class="task">
             <div style="width: 100%; height: 100%">
-              <div
-                class="task-header"
-                v-on:dblclick.stop="
-                  () => {
-                    task.title = promptInput(task.title);
-                  }
-                "
-              >
+              <div class="task-header">
                 ({{ level.get(task.id) }})
                 {{ task.title }}
               </div>
@@ -490,6 +455,18 @@ function promptInput(value: string): string {
         "
       >
         <IconTrash />
+      </button>
+      <button
+        class="toolbar-btn edit-btn"
+        title="Edit task"
+        v-on:click.stop="
+          () => {
+            state.editTaskID = state.activeTaskId!;
+            state.activeTaskId = undefined;
+          }
+        "
+      >
+        <IconPencil />
       </button>
       <button
         class="toolbar-btn connect-btn"
@@ -708,6 +685,8 @@ button:hover {
   height: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .task-rect {
@@ -738,12 +717,24 @@ button:hover {
   font-weight: 600;
   font-size: 16px;
   color: var(--task-fg);
-  padding: 8px 12px 4px;
+  padding: 12px 16px;
   flex-grow: 1;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.4;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .connect-btn,
-.delete-btn {
+.delete-btn,
+.edit-btn {
   height: 1.8rem;
   background: rgb(0, 0, 0, 0.2);
   color: var(--task-fg);
@@ -754,18 +745,21 @@ button:hover {
 }
 
 .connect-btn svg,
-.delete-btn svg {
+.delete-btn svg,
+.edit-btn svg {
   width: 100%;
   height: 100%;
 }
 
 .connect-btn:hover,
-.delete-btn:hover {
+.delete-btn:hover,
+.edit-btn:hover {
   background: rgb(0, 0, 0, 0.4);
 }
 
 .connect-btn,
-.delete-btn {
+.delete-btn,
+.edit-btn {
   width: 3em;
 }
 
@@ -773,16 +767,15 @@ button:hover {
   position: absolute;
   display: flex;
   flex-direction: row;
-  gap: 6px;
-  border-radius: 10px;
-  padding: 6px 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(5px);
+  padding: 1px;
+  box-shadow: 0 0px 12px rgba(0, 0, 0, 0.4);
   z-index: 100;
 }
 
 .task-actions button {
   min-width: fit-content;
+  border-radius: 0px;
+  border: 1px solid var(--task-border);
 }
 
 .task-actions-blocked {
@@ -885,10 +878,6 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.resize-handle:hover {
-  cursor: nwse-resize;
 }
 
 .backdrop {
