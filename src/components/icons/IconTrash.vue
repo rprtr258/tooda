@@ -4,7 +4,7 @@
     height="20"
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#000"
+    stroke="currentColor"
     stroke-width="2"
   >
     <polyline points="3 6 5 6 21 6"></polyline>

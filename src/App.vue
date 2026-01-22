@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 3rd party libs
-import {computed, reactive, useTemplateRef} from 'vue';
+import {computed, reactive, useTemplateRef, watch} from 'vue';
 import {useMouse} from '@vueuse/core';
 // local
 // icons
@@ -80,14 +80,44 @@ const state = reactive<{
       }
     | null;
   editTaskID?: TaskID;
+  activeTaskId?: TaskID;
 }>({
   state: null,
 });
+
+watch(
+  () => showHelperModal.value.value,
+  () => (state.activeTaskId = undefined),
+);
+
+function handleTaskClick(e: MouseEvent, taskId: TaskID) {
+  // Don't activate toolbar on double-click (let it edit title)
+  if (e.detail === 2) {
+    state.activeTaskId = undefined;
+    return;
+  }
+
+  // Don't activate toolbar if we're connecting
+  if (state.state?.kind === 'connecting') {
+    return;
+  }
+
+  // Toggle toolbar for this task
+  if (state.activeTaskId === taskId) {
+    state.activeTaskId = undefined;
+  } else {
+    state.activeTaskId = taskId;
+  }
+}
 
 function handleTaskMouseDownDrag(e: MouseEvent, taskId: TaskID) {
   if (state.state !== null) {
     return;
   }
+
+  // Don't hide toolbar immediately - wait to see if it's a drag or click
+  // The click handler will show/hide toolbar
+
   state.state = {
     kind: 'dragging',
     selectedTask: taskId,
@@ -97,6 +127,10 @@ function handleTaskMouseDownDrag(e: MouseEvent, taskId: TaskID) {
 }
 
 function handleResizeMouseDown(e: MouseEvent, taskId: TaskID): void {
+  if (state.state !== null) {
+    return;
+  }
+
   state.state = {
     kind: 'resizing',
     selectedTask: taskId,
@@ -129,6 +163,9 @@ function handleMouseMove(e: MouseEvent) {
       invert(translate(apply(m, move))),
     );
   } else if (state.state.kind === 'dragging') {
+    // Hide toolbar when dragging actually starts
+    state.activeTaskId = undefined;
+
     const mouse = apply(m, [e.clientX, e.clientY]);
     const move = apply(m, state.state.start!);
     db.value.tasks.get(state.state.selectedTask)!.at = [
@@ -136,6 +173,9 @@ function handleMouseMove(e: MouseEvent) {
       mouse[1] + state.state.original![1] - move[1],
     ];
   } else if (state.state.kind === 'resizing') {
+    // Hide toolbar when resizing actually starts
+    state.activeTaskId = undefined;
+
     const move = apply(m, [e.clientX, e.clientY]);
     const selTask = db.value.tasks.get(state.state.selectedTask)!;
     selTask.width = Math.max(100, move[0] - state.state.start![0]);
@@ -194,6 +234,9 @@ function onSVGClick(e: MouseEvent) {
   } else if (state.state?.kind === 'connecting') {
     // Click on background to cancel connection
     state.state = null;
+  } else {
+    // Single click on background hides toolbar
+    state.activeTaskId = undefined;
   }
 }
 
@@ -214,6 +257,59 @@ const tasksByStatus = computed(() => {
     tasks.sort((a, b) => a - b);
   }
   return res;
+});
+
+const activeTask = computed(() =>
+  state.activeTaskId ? db.value.tasks.get(state.activeTaskId) : null,
+);
+
+const toolbarPosition = computed(() => {
+  if (!activeTask.value || !svg.value) return null;
+
+  const task = activeTask.value;
+  const toolbarHeight = 60; // Toolbar height including padding
+  const margin = 10;
+  // Actual toolbar width: 3 buttons (40px each) + gaps (16px) + padding (16px)
+  const toolbarWidth =
+    40 +
+    16 +
+    40 +
+    (state.activeTaskId &&
+    db.value.tasks.get(state.activeTaskId)?.status !== 'blocked'
+      ? 16 + 40
+      : 0);
+
+  // Convert task coordinates from SVG to screen
+  // Need inverse transformation: SVG -> screen
+  const invertedView = invert(db.value.view);
+  const taskTopLeft = apply(invertedView, task.at);
+  const taskBottomRight = apply(invertedView, [
+    task.at[0] + task.width,
+    task.at[1] + task.height,
+  ]);
+
+  const taskScreenWidth = taskBottomRight[0] - taskTopLeft[0];
+
+  // Position above the task in screen coordinates
+  let top = taskTopLeft[1] - toolbarHeight - margin;
+  // If not enough space above, position below
+  if (top < 0) {
+    top = taskBottomRight[1] + margin;
+  }
+
+  const containerWidth = window.innerWidth;
+  // Ensure toolbar doesn't go off screen horizontally
+  let left = taskTopLeft[0] + (taskScreenWidth - toolbarWidth) / 2;
+  if (left < 0) {
+    left = 0;
+  } else if (left + toolbarWidth > containerWidth) {
+    left = containerWidth - toolbarWidth;
+  }
+
+  return {
+    top: `${top}px`,
+    left: `${left}px`,
+  };
 });
 
 function exportTasks() {
@@ -355,6 +451,7 @@ function promptInput(value: string): string {
           :width="task.width.toString()"
           :height="task.height.toString()"
           class="task-content"
+          v-on:click.stop="(e: MouseEvent) => handleTaskClick(e, task.id)"
         >
           <div class="task" v-on:dblclick="() => (state.editTaskID = task.id)">
             <div style="width: 100%; height: 100%">
@@ -370,41 +467,64 @@ function promptInput(value: string): string {
                 {{ task.title }}
               </div>
             </div>
-            <div class="task-actions">
-              <button
-                class="task-checkbox delete-btn"
-                v-on:click.stop="(e: MouseEvent) => deleteTask(task.id)"
-              >
-                <IconTrash />
-              </button>
-              <button
-                class="task-checkbox connect-btn"
-                v-on:click.stop="
-                  (e: MouseEvent) =>
-                    (state.state = {
-                      kind: 'connecting',
-                      fromId: task.id,
-                      connecting: setConnecting(mousex, mousey),
-                    })
-                "
-              >
-                <IconLink />
-              </button>
-              <div style="flex-grow: 1"></div>
-              <button
-                v-if="task.status !== 'blocked'"
-                class="task-checkbox"
-                :checked="task.status === 'completed'"
-                v-on:click="() => toggleTaskCompletion(task.id)"
-              >
-                {{ task.status === 'completed' ? 'Cancel' : 'Complete' }}
-              </button>
-              <div v-else></div>
-            </div>
           </div>
         </foreignObject>
       </g>
     </svg>
+
+    <div
+      v-if="state.activeTaskId && toolbarPosition"
+      class="task-actions"
+      :class="`task-actions-${activeTask?.status || 'pending'}`"
+      :style="toolbarPosition"
+      v-on:click.stop
+    >
+      <button
+        class="toolbar-btn delete-btn"
+        title="Delete task"
+        v-on:click.stop="
+          () => {
+            deleteTask(state.activeTaskId!);
+            state.activeTaskId = undefined;
+          }
+        "
+      >
+        <IconTrash />
+      </button>
+      <button
+        class="toolbar-btn connect-btn"
+        title="Connect task"
+        v-on:click.stop="
+          () => {
+            state.state = {
+              kind: 'connecting',
+              fromId: state.activeTaskId!,
+              connecting: setConnecting(mousex, mousey),
+            };
+            state.activeTaskId = undefined;
+          }
+        "
+      >
+        <IconLink />
+      </button>
+      <button
+        v-if="activeTask && activeTask.status !== 'blocked'"
+        class="toolbar-btn"
+        :title="
+          activeTask.status === 'completed'
+            ? 'Cancel completion'
+            : 'Complete task'
+        "
+        v-on:click.stop="
+          () => {
+            toggleTaskCompletion(state.activeTaskId!);
+            state.activeTaskId = undefined;
+          }
+        "
+      >
+        {{ activeTask.status === 'completed' ? 'Cancel' : 'Complete' }}
+      </button>
+    </div>
   </div>
   <div
     id="app-container"
@@ -414,7 +534,15 @@ function promptInput(value: string): string {
   >
     <button
       title="Close"
-      style="position: absolute; top: 0; right: 0; z-index: 1"
+      style="
+        position: absolute;
+        top: 0;
+        right: 0;
+        z-index: 1;
+        padding: 8px;
+        background-color: red;
+        border: 5px solid brown;
+      "
       v-on:click="() => showKanban.off()"
     >
       X
@@ -519,32 +647,32 @@ body {
 .btn-group-2 {
   display: flex;
   flex-direction: row;
-  gap: 8px;
 }
 
 .btn-group {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  /* flex-direction: column; */
   position: absolute;
   top: 20px;
   left: 20px;
   z-index: 10;
   background: rgba(30, 30, 30, 0.8);
-  border-radius: 10px;
-  padding: 15px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(5px);
   max-width: 300px;
+}
+
+.btn-group button {
+  border: 1px solid var(--menu-button-bg-hover);
+  padding: 6px;
 }
 
 button {
   background: var(--menu-button-bg);
   color: var(--menu-button-fg);
   border: none;
-  padding: 10px;
-  max-height: 40px;
-  border-radius: 6px;
+  /* padding: 10px; */
+  max-height: 30px;
+  max-width: 30px;
   cursor: pointer;
   font-weight: 500;
   display: flex;
@@ -614,14 +742,6 @@ button:hover {
   flex-grow: 1;
 }
 
-.task-actions {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.task-checkbox,
 .connect-btn,
 .delete-btn {
   height: 1.8rem;
@@ -633,26 +753,97 @@ button:hover {
   padding: 3px;
 }
 
-.task-checkbox svg,
 .connect-btn svg,
 .delete-btn svg {
   width: 100%;
   height: 100%;
 }
 
-.task-checkbox:hover,
 .connect-btn:hover,
 .delete-btn:hover {
   background: rgb(0, 0, 0, 0.4);
 }
 
-.task-checkbox {
-  width: 5.5em;
-}
-
 .connect-btn,
 .delete-btn {
   width: 3em;
+}
+
+.task-actions {
+  position: absolute;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 6px 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+  z-index: 100;
+}
+
+.task-actions button {
+  min-width: fit-content;
+}
+
+.task-actions-blocked {
+  background: var(--task-toolbar-blocked-bg);
+}
+
+.task-actions-pending {
+  background: var(--task-toolbar-pending-bg);
+}
+
+.task-actions-completed {
+  background: var(--task-toolbar-completed-bg);
+}
+
+.toolbar-btn {
+  color: var(--task-fg);
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-btn:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.task-actions-blocked .toolbar-btn {
+  background: var(--task-toolbar-btn-blocked-bg);
+}
+
+.task-actions-blocked .toolbar-btn:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.task-actions-pending .toolbar-btn {
+  background: var(--task-toolbar-btn-pending-bg);
+}
+
+.task-actions-pending .toolbar-btn:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.task-actions-completed .toolbar-btn {
+  background: var(--task-toolbar-btn-completed-bg);
+}
+
+.task-actions-completed .toolbar-btn:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.toolbar-btn svg {
+  width: 100%;
+  height: 100%;
 }
 
 .edge {
@@ -685,7 +876,6 @@ button:hover {
   border-radius: 8px;
   display: flex;
   flex-direction: row;
-  gap: 8px;
   z-index: 10;
 }
 
