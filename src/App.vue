@@ -170,7 +170,7 @@ function handleMouseUp(e: MouseEvent) {
   // Find task at mouse position
   const [mouseX, mouseY] = apply(db.value.view, [e.clientX, e.clientY]);
 
-  for (const [id, task] of db.value.tasks.entries()) {
+  for (const task of shownTasks.value) {
     const {width, height} = rects.value.get(task.id)!;
     if (
       mouseX >= task.at[0] &&
@@ -178,7 +178,7 @@ function handleMouseUp(e: MouseEvent) {
       mouseY >= task.at[1] &&
       mouseY <= task.at[1] + height
     ) {
-      connectTasks(state.state.fromId, id);
+      connectTasks(state.state.fromId, task.id);
       break;
     }
   }
