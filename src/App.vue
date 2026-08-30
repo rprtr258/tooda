@@ -384,13 +384,11 @@ function promptInput(value: string): string {
           <polygon points="0 0, 10 3.5, 0 7" fill="var(--task-edge)" />
         </marker>
       </defs>
-      <line
-        v-for="edge in edgesCoords"
-        :x1="edge.start[0]"
-        :y1="edge.start[1]"
-        :x2="edge.end[0]"
-        :y2="edge.end[1]"
+      <path
+        v-for="[sx, sy, c1x, c1y, c2x, c2y, ex, ey, ae, as] in edgesCoords"
+        :d="`M ${sx} ${sy} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${ex} ${ey}`"
         class="edge"
+        fill="none"
       />
       <line
         v-if="state.state?.kind === 'connecting'"
