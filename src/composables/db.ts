@@ -1,5 +1,6 @@
 import { computed, watchEffect } from "vue";
 import { useStorage } from "@vueuse/core";
+import { getBoxToBoxArrow } from "curved-arrows";
 import {
   Mat3,
   Rectangle,
@@ -329,8 +330,9 @@ export function useDB() {
           height: toHeight + grow * 2,
         };
 
-        // Calculate closest points on task borders
-        return clipLineBetweenRectangles(from2, to2);
+        return getBoxToBoxArrow(
+          fromTask.at[0], fromTask.at[1], fromWidth, fromHeight,
+          toTask.at[0], toTask.at[1], toWidth, toHeight);
       });
   });
 
