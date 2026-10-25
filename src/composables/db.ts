@@ -95,15 +95,19 @@ function clipLineBetweenRectangles(
   };
 }
 
-function calculateTaskDimensions(title: string): Size {
+function calculateTaskDimensions(task: Pick<Task, "title" | "description">): Size {
+  const title = task.title;
   const ratio = 6 / 2;
   const charWidth = 10; // Approximate width per character (increased for better visibility)
   const lineHeight = 24; // Line height for text
   const padding = 16; // Padding around text
+  // Width of the description icon (18px) plus its margin (6px), reserved
+  // so the title wraps the same as without the icon
+  const iconSpace = task.description !== "" ? 18 + 6 : 0;
 
   const N = title.length + 4;
   const cols = Math.floor(Math.sqrt(ratio * lineHeight / charWidth * N));
-  const width = charWidth * (cols + 1) + 2 * padding;
+  const width = charWidth * (cols + 1) + 2 * padding + iconSpace;
   const height = lineHeight * Math.floor(N / cols) + 2 * padding;
   return {width, height};
 }
@@ -155,7 +159,7 @@ export function useDB() {
       .values()]
       .map(task => [
         task.id,
-        calculateTaskDimensions(task.title),
+        calculateTaskDimensions(task),
       ]);
     return new Map<TaskID, Size>(entries);
   });
@@ -310,8 +314,8 @@ export function useDB() {
         const fromTask = db.value.tasks.get(from)!;
         const toTask = db.value.tasks.get(to)!;
 
-        const {width: fromWidth, height: fromHeight} = calculateTaskDimensions(fromTask.title);
-        const {width: toWidth, height: toHeight} = calculateTaskDimensions(toTask.title);
+        const {width: fromWidth, height: fromHeight} = calculateTaskDimensions(fromTask);
+        const {width: toWidth, height: toHeight} = calculateTaskDimensions(toTask);
         const from2: Rectangle = {
           at: fromTask.at,
           width: fromWidth,

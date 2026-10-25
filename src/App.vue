@@ -5,6 +5,7 @@ import {useMouse} from '@vueuse/core';
 // local
 // icons
 import IconBoard from './components/icons/IconBoard.vue';
+import IconDescription from './components/icons/IconDescription.vue';
 import IconEyeClose from './components/icons/IconEyeClose.vue';
 import IconEyeOpen from './components/icons/IconEyeOpen.vue';
 import IconHelp from './components/icons/IconHelp.vue';
@@ -430,6 +431,10 @@ function promptInput(value: string): string {
               <div class="task-header">
                 ({{ level.get(task.id) }})
                 {{ task.title }}
+                <IconDescription
+                  v-if="task.description !== ''"
+                  class="task-desc-icon"
+                />
               </div>
             </div>
           </div>
@@ -699,6 +704,14 @@ button:hover {
 
 .task-content {
   cursor: move;
+}
+
+.task-desc-icon {
+  color: var(--task-fg);
+  opacity: 0.6;
+  pointer-events: none;
+  margin-left: 6px;
+  flex-shrink: 0;
 }
 
 .task-pending {
