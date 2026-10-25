@@ -9,10 +9,28 @@ permissions:
   contents: write
 
 jobs:
-  build_and_deploy:
+  typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: bun install
+
+      - name: Typecheck
+        run: bun run typecheck
+
+  build_and_deploy:
+    needs: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
         with:
           submodules: true
 

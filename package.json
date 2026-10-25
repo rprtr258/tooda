@@ -9,31 +9,20 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "typecheck": "vue-tsc --noEmit",
-    "lint:oxlint": "oxlint . --fix -D correctness --ignore-path .gitignore",
-    "lint:eslint": "eslint . --fix",
-    "lint": "run-s lint:*"
+    "lint": "oxlint . --fix -D correctness --ignore-path .gitignore"
   },
   "dependencies": {
-    "@vueuse/core": "^13.3.0",
-    "bun-types": "^1.2.15",
-    "marked": "^16.1.1",
-    "vue": "^3.5.13"
+    "@vueuse/core": "^13.9.0",
+    "marked": "^16.4.2",
+    "vue": "^3.5.44"
   },
   "devDependencies": {
-    "@tsconfig/node22": "^22.0.1",
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-vue": "^5.2.3",
-    "@vue/eslint-config-typescript": "^14.5.0",
-    "@vue/tsconfig": "^0.9.1",
-    "eslint": "^9.22.0",
-    "eslint-plugin-oxlint": "^0.16.0",
-    "eslint-plugin-vue": "~10.10.0",
-    "jiti": "^2.4.2",
+    "@vitejs/plugin-vue": "^5.2.4",
     "npm-run-all2": "^7.0.2",
-    "oxlint": "^0.16.0",
+    "oxlint": "^0.16.12",
     "typescript": "~5.9.3",
-    "vite": "^6.2.4",
-    "vite-plugin-vue-devtools": "^7.7.2",
+    "vite": "^6.4.5",
+    "vite-plugin-vue-devtools": "^7.7.10",
     "vue-tsc": "^3.3.11"
   }
 }
